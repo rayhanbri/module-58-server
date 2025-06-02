@@ -51,6 +51,23 @@ async function run() {
     })
 
     // job application 
+
+    // get data from job application 
+    app.get('/applications',async(req,res)=>{
+      const email= req.query.email;
+      const query = {
+        applicant : email
+      }
+      const result = await applicationsCollection.find(query).toArray()
+      res.send(result)
+      // ei ta kaj korche ki na chech korar upai 
+      // url/applications?email=rayahn@gmail.com 
+    })
+
+
+
+
+    // post data in job application 
     app.post('/applications', async (req, res) => {
       const application = req.body;
       console.log(application)
