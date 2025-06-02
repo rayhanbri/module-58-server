@@ -2,7 +2,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const app = express()
 const cors = require('cors')
-const port =  process.env.PORT ||   3000
+const port = process.env.PORT || 3000
 require('dotenv').config()
 
 // middleware 
@@ -33,17 +33,28 @@ async function run() {
 
     const jobsCollection = client.db('module-58').collection('jobs')
 
-    app.get('/jobs', async(req,res)=> {
-        const result = await jobsCollection.find().toArray();
-        res.send(result)
+    // eikhane collection create korle ar manually giye banai diye aste hoi na 
+    const applicationsCollection = client.db('module-58').collection('applications')
+
+    app.get('/jobs', async (req, res) => {
+      const result = await jobsCollection.find().toArray();
+      res.send(result)
     })
 
 
     // get single data with id 
-    app.get('/jobs/:id',async(req,res)=>{
+    app.get('/jobs/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id:new ObjectId(id)}
+      const filter = { _id: new ObjectId(id) }
       const result = await jobsCollection.findOne(filter)
+      res.send(result)
+    })
+
+    // job application 
+    app.post('/applications', async (req, res) => {
+      const application = req.body;
+      console.log(application)
+      const result = await applicationsCollection.insertOne(application)
       res.send(result)
     })
 
