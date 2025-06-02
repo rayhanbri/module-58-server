@@ -59,6 +59,17 @@ async function run() {
         applicant : email
       }
       const result = await applicationsCollection.find(query).toArray()
+
+      // a bad way to aggregate data 
+      for(const application of result){
+        jobId = application.jobId;
+        const jobQuery = {_id:new ObjectId(jobId)}
+        const job = await jobsCollection.findOne(jobQuery)
+        application.company= job.company
+        application.title = job.title
+        application.company_logo = job.company_logo
+      }
+
       res.send(result)
       // ei ta kaj korche ki na chech korar upai 
       // url/applications?email=rayahn@gmail.com 
