@@ -94,6 +94,20 @@ async function run() {
       res.send(result)
     })
 
+
+    //  status change 
+    app.patch('/applications/:id',async(req,res) => {
+      const id = req.params.id;
+      const filter  = {_id:new ObjectId(id)};
+      const data = req.body.status;
+      const updatedDoc = {
+        $set:{status : data}
+      }
+      const result = await applicationsCollection.updateOne(filter,updatedDoc)
+      res.send(result)
+
+    })
+
     // data for showing on view application 
     app.get('/applications/job/:id',async(req,res) => {
       const id = req.params.id;
