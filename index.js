@@ -37,7 +37,12 @@ async function run() {
     const applicationsCollection = client.db('module-58').collection('applications')
 
     app.get('/jobs', async (req, res) => {
-      const result = await jobsCollection.find().toArray();
+      const email = req.query.email;
+      const query = {};
+      if(email){
+        query.hr_email= email;
+      }
+      const result = await jobsCollection.find(query).toArray();
       res.send(result)
     })
 
@@ -53,9 +58,9 @@ async function run() {
     // post in job 
     app.post('/jobs', async (req, res) => {
       const newJob = req.body;
+      console.log(newJob)
       const result = await jobsCollection.insertOne(newJob);
       res.send(result)
-
     })
 
     // job application 
