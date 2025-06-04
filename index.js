@@ -47,6 +47,26 @@ async function run() {
     })
 
 
+  // eitar jobs/id er niche declare korle kaj korbe na , eita upore declare korte hobe 
+    // aggregate data 
+    app.get('/jobs/applications',async(req,res)=>{
+      const email = req.query.email;
+      const query = {hr_email :  email}
+      const jobs = await jobsCollection.find(query).toArray();
+
+      for(const job of jobs){
+        const applicationQuery = {jobId: job._id.toString()}
+        const applicationCount = await applicationsCollection.countDocuments(applicationQuery)
+        job.applicationCount = applicationCount;
+
+      }
+      res.send(jobs)
+
+    })
+
+
+
+
     // get single data with id 
     app.get('/jobs/:id', async (req, res) => {
       const id = req.params.id;
@@ -62,6 +82,8 @@ async function run() {
       const result = await jobsCollection.insertOne(newJob);
       res.send(result)
     })
+
+
 
     // job application 
 
@@ -86,6 +108,11 @@ async function run() {
       // ei ta kaj korche ki na chech korar upai 
       // url/applications?email=rayahn@gmail.com 
     })
+
+
+    
+
+
     // post data in job application 
     app.post('/applications', async (req, res) => {
       const application = req.body;
