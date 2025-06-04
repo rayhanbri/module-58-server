@@ -58,7 +58,7 @@ async function run() {
     // post in job 
     app.post('/jobs', async (req, res) => {
       const newJob = req.body;
-      console.log(newJob)
+      // console.log(newJob)
       const result = await jobsCollection.insertOne(newJob);
       res.send(result)
     })
@@ -82,20 +82,23 @@ async function run() {
         application.title = job.title
         application.company_logo = job.company_logo
       }
-
       res.send(result)
       // ei ta kaj korche ki na chech korar upai 
       // url/applications?email=rayahn@gmail.com 
     })
-
-
-
-
     // post data in job application 
     app.post('/applications', async (req, res) => {
       const application = req.body;
       console.log(application)
       const result = await applicationsCollection.insertOne(application)
+      res.send(result)
+    })
+
+    // data for showing on view application 
+    app.get('/applications/job/:id',async(req,res) => {
+      const id = req.params.id;
+      const query = {jobId:id}
+      const result = await applicationsCollection.find(query).toArray();
       res.send(result)
     })
 
