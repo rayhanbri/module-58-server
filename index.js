@@ -15,22 +15,37 @@ require('dotenv').config()
 
 // middleware 
 app.use(cors({
-  origin:['http://localhost:5173'],
-  credentials:true
+  origin: ['http://localhost:5173'],
+  credentials: true
 }))
 app.use(express.json())
 app.use(cookiePareser())
 
 
-const logger = (req,res,next) => {
+const logger = (req, res, next) => {
   console.log('i am logger');
   next();
 }
 
-const verifyToken = (req,res,next) => {
+const verifyToken = (req, res, next) => {
   const token = req?.cookies?.token;
-  console.log('cookie in middleware',token)
-  next();
+  console.log('cookie in middleware', token)
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' })
+  }
+
+
+  // ekhane amra token k verify korbo bhondhura 
+  jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: 'unauthorized access' })
+    }
+    console.log(decoded)
+    req.decoded = decoded;
+    next();
+    // ekhon abar app .get e giye if set kore asbho decode diye 
+  })
+  // next aghe ekhane chilo 
 }
 
 // cluster - connect er moddo theke connect korar code tah iye asbho 
@@ -62,21 +77,21 @@ async function run() {
 
     // eikhane collection create korle ar manually giye banai diye aste hoi na 
     const applicationsCollection = client.db('module-58').collection('applications')
-    
+
 
 
     // jwt related api 
-    app.post ('/jwt', async(req,res)=>{
-      const userData= req.body;
+    app.post('/jwt', async (req, res) => {
+      const userData = req.body;
       // console.log(userData)
-      const token = jwt.sign(userData,process.env.JWT_ACCESS_SECRET,{expiresIn:'1d'})
-      res.cookie('token',token,{
-        httpOnly:true,
-        secure:false
+      const token = jwt.sign(userData, process.env.JWT_ACCESS_SECRET, { expiresIn: '1d' })
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: false
       })
-      res.send({success:true,token})
+      res.send({ success: true, token })
     })
-  
+
     // get  job data 
     app.get('/jobs', async (req, res) => {
       const email = req.query.email;
@@ -115,18 +130,25 @@ async function run() {
 
     app.post('/applications', async (req, res) => {
       const data = req.body;
-    
+
       const result = await applicationsCollection.insertOne(data)
       res.send(result)
     })
 
     // get data with email 
-    app.get('/applications',logger,verifyToken, async (req, res) => {
+    app.get('/applications', logger, verifyToken, async (req, res) => {
       const email = req.query.email;
+
+      if(email !== req.decoded.email){
+        return res.status(403).send({message:'forbidden access'})
+      }
+
+
+
       const query = {
         applicant: email
       }
-        // console.log('cookies from server',req.cookies)
+      // console.log('cookies from server',req.cookies)
       const result = await applicationsCollection.find(query).toArray()
 
       // data  aggregate here 
