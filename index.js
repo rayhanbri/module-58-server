@@ -21,6 +21,18 @@ app.use(cors({
 app.use(express.json())
 app.use(cookiePareser())
 
+
+const logger = (req,res,next) => {
+  console.log('i am logger');
+  next();
+}
+
+const verifyToken = (req,res,next) => {
+  const token = req?.cookies?.token;
+  console.log('cookie in middleware',token)
+  next();
+}
+
 // cluster - connect er moddo theke connect korar code tah iye asbho 
 
 // mongodb the insert doucment e giye data gulo inseta korbo
@@ -109,12 +121,12 @@ async function run() {
     })
 
     // get data with email 
-    app.get('/applications', async (req, res) => {
+    app.get('/applications',logger,verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = {
         applicant: email
       }
-        console.log('cookies from server',req.cookies)
+        // console.log('cookies from server',req.cookies)
       const result = await applicationsCollection.find(query).toArray()
 
       // data  aggregate here 
