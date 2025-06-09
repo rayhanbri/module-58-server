@@ -2,6 +2,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const app = express()
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 3000
 require('dotenv').config()
 
@@ -31,63 +32,68 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+
     const jobsCollection = client.db('module-58').collection('jobs')
+
+
 
     // eikhane collection create korle ar manually giye banai diye aste hoi na 
     const applicationsCollection = client.db('module-58').collection('applications')
+    
 
-    app.get('/jobs', async (req, res) => {
-      const email = req.query.email;
-      const query = {};
-      if(email){
-        query.hr_email= email;
-      }
-      const result = await jobsCollection.find(query).toArray();
-      res.send(result)
+
+    // jwt related api 
+    app.post('/jwt',async(req,res)=> {
+      const {email }  = req.body;
+      const user = {email};
+      const token = jwt.sign(user, 'secret',{expiresIn: '1h'})
+      res.send({token})
     })
 
 
-  // eitar jobs/id er niche declare korle kaj korbe na , eita upore declare korte hobe 
-    // aggregate data 
-    app.get('/jobs/applications',async(req,res)=>{
+    // get  job data 
+    // app.get('/jobs', async (req, res) => {
+    //   const email = req.query.email;
+    //   const query = {};
+    //   if (email) {
+    //     query.hr_email = email;
+    //   }
+    //   const result = await jobsCollection.find(query).toArray()
+    //   res.send(result)
+    // })
+
+    app.get('/jobs/applications', async (req, res) => {
       const email = req.query.email;
-      const query = {hr_email :  email}
+      const query = { hr_email: email }
+
       const jobs = await jobsCollection.find(query).toArray();
 
-      for(const job of jobs){
-        const applicationQuery = {jobId: job._id.toString()}
+      for (const job of jobs) {
+        const applicationQuery = { jobId: job._id.toString() }
         const applicationCount = await applicationsCollection.countDocuments(applicationQuery)
-        job.applicationCount = applicationCount;
-
+        job.applicationCount = applicationCount + 1;
       }
       res.send(jobs)
-
     })
 
-
-
-
-    // get single data with id 
+    // get data with job id 
     app.get('/jobs/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
-      const result = await jobsCollection.findOne(filter)
-      res.send(result)
-    })
-
-    // post in job 
-    app.post('/jobs', async (req, res) => {
-      const newJob = req.body;
-      // console.log(newJob)
-      const result = await jobsCollection.insertOne(newJob);
+      const result = await jobsCollection.findOne(filter);
       res.send(result)
     })
 
 
+    // data post for applicaton 
 
-    // job application 
+    app.post('/applications', async (req, res) => {
+      const data = req.body;
+      const result = await applicationsCollection.insertOne(data)
+      res.send(result)
+    })
 
-    // get data from job application 
+    // get data with email 
     app.get('/applications', async (req, res) => {
       const email = req.query.email;
       const query = {
@@ -95,52 +101,44 @@ async function run() {
       }
       const result = await applicationsCollection.find(query).toArray()
 
-      // a bad way to aggregate data 
+      // data  aggregate here 
       for (const application of result) {
-        jobId = application.jobId;
+        const jobId = application.jobId;
         const jobQuery = { _id: new ObjectId(jobId) }
         const job = await jobsCollection.findOne(jobQuery)
-        application.company = job.company
         application.title = job.title
         application.company_logo = job.company_logo
+        application.company = job.company;
       }
       res.send(result)
-      // ei ta kaj korche ki na chech korar upai 
-      // url/applications?email=rayahn@gmail.com 
     })
 
-
-    
-
-
-    // post data in job application 
-    app.post('/applications', async (req, res) => {
-      const application = req.body;
-      console.log(application)
-      const result = await applicationsCollection.insertOne(application)
-      res.send(result)
-    })
-
-
-    //  status change 
-    app.patch('/applications/:id',async(req,res) => {
+    // get one data  for status
+    app.patch('/applications/:id', async (req, res) => {
       const id = req.params.id;
-      const filter  = {_id:new ObjectId(id)};
+      const filter = { _id: new ObjectId(id) }
       const data = req.body.status;
-      const updatedDoc = {
-        $set:{status : data}
+      const updateDoc = {
+        $set: { status: data }
       }
-      const result = await applicationsCollection.updateOne(filter,updatedDoc)
+      const result = await applicationsCollection.updateOne(filter, updateDoc)
       res.send(result)
 
     })
 
-    // data for showing on view application 
-    app.get('/applications/job/:id',async(req,res) => {
+
+
+
+
+
+
+    // get data  for single application 
+    app.get('/applications/job/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {jobId:id}
+      const query = { jobId: id }
       const result = await applicationsCollection.find(query).toArray();
       res.send(result)
+
     })
 
 
@@ -148,8 +146,13 @@ async function run() {
 
 
 
+    // data post for job 
+    app.post('/jobs', async (req, res) => {
+      const data = req.body;
+      const result = await jobsCollection.insertOne(data);
+      res.send(result)
+    })
 
-    // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
