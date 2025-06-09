@@ -20,6 +20,14 @@ app.use(cors({
 }))
 app.use(express.json())
 app.use(cookiePareser())
+var admin = require("firebase-admin");
+
+var serviceAccount = require("./firebase-admin-key.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
 
 
 const logger = (req, res, next) => {
@@ -46,6 +54,32 @@ const verifyToken = (req, res, next) => {
     // ekhon abar app .get e giye if set kore asbho decode diye 
   })
   // next aghe ekhane chilo 
+}
+
+
+const verifyFirebaseToken = async(req,res,next) =>{
+  const authHeader= req.headers?.authorization;
+  const token = authHeader.split(' ')[1];
+
+  if(!token){
+    return res.status(401).send({message:'unauthorized access'})
+
+  }
+
+  // erpor firebse er account er project e giye projectsettinge jabo.
+  // er por service accounts e jabo .firebase admin install.code ta niye asbho okha
+  // theke .middle ware er niche oita boshai dhibo .generate new key the click korle ekta jinis dowanload hobe .er por download hoye gele file take copy kore ekhae niye asbho and ekta meaining full nam dhibho.code je khane copy korechi okhane middle ware er niche require er jaighai new file er nam ta dhibho.
+//.erpor await kora userinfo set korbo 
+ 
+  // eita application e set kore asle eita cmd the dhekha jabe 
+  // er por ekhane abar asbho
+  const userInfo = await admin.auth().verifyIdToken(token)
+  // console.log( 'id token ula la ',  userInfo)
+  req.tokenEmail = userInfo.email;
+ // console.log('firebase token',token)
+//  er por application e giye state ment bosabho 
+  next();
+
 }
 
 // cluster - connect er moddo theke connect korar code tah iye asbho 
@@ -136,8 +170,12 @@ async function run() {
     })
 
     // get data with email 
-    app.get('/applications', logger, verifyToken, async (req, res) => {
+    app.get('/applications', logger, verifyToken,verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
+
+      if(req.tokenEmail !== email){
+          return res.status(403).send({message:'forbidden access'})
+      }
 
       if(email !== req.decoded.email){
         return res.status(403).send({message:'forbidden access'})
