@@ -19,6 +19,7 @@ app.use(cors({
   credentials:true
 }))
 app.use(express.json())
+app.use(cookiePareser())
 
 // cluster - connect er moddo theke connect korar code tah iye asbho 
 
@@ -55,7 +56,7 @@ async function run() {
     // jwt related api 
     app.post ('/jwt', async(req,res)=>{
       const userData= req.body;
-      console.log(userData)
+      // console.log(userData)
       const token = jwt.sign(userData,process.env.JWT_ACCESS_SECRET,{expiresIn:'1d'})
       res.cookie('token',token,{
         httpOnly:true,
@@ -102,6 +103,7 @@ async function run() {
 
     app.post('/applications', async (req, res) => {
       const data = req.body;
+    
       const result = await applicationsCollection.insertOne(data)
       res.send(result)
     })
@@ -112,6 +114,7 @@ async function run() {
       const query = {
         applicant: email
       }
+        console.log('cookies from server',req.cookies)
       const result = await applicationsCollection.find(query).toArray()
 
       // data  aggregate here 
