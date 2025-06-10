@@ -172,7 +172,7 @@ async function run() {
     // get data with email 
     app.get('/applications', logger, verifyToken,verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
-
+        // firebase admin file k must git ignore korte hobe 
       if(req.tokenEmail !== email){
           return res.status(403).send({message:'forbidden access'})
       }
@@ -201,7 +201,7 @@ async function run() {
       res.send(result)
     })
 
-    // get one data  for status
+    // get one data  
     app.patch('/applications/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
