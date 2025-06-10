@@ -30,10 +30,7 @@ admin.initializeApp({
 
 
 
-const logger = (req, res, next) => {
-  console.log('i am logger');
-  next();
-}
+
 
 const verifyToken = (req, res, next) => {
   const token = req?.cookies?.token;
