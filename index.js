@@ -2,82 +2,28 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const app = express()
 const cors = require('cors')
-const jwt = require('jsonwebtoken');
-const cookiePareser = require('cookie-parser')
 const port = process.env.PORT || 3000
 require('dotenv').config()
-
 // 4th use cookie for cors midlware 
-
-
-
-
-
 // middleware 
-app.use(cors({
-  origin: ['http://localhost:5173'],
-  credentials: true
-}))
+app.use(cors())
 app.use(express.json())
-app.use(cookiePareser())
-var admin = require("firebase-admin");
 
-var serviceAccount = require("./firebase-admin-key.json");
-
+// install firebase admin in cmd 
+const admin = require("firebase-admin");
+// change the path here 
+const serviceAccount = require("./firebase-service.json");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
+// now generate a private key from firebase
+// then copy in this project file 
+// must set this file in git ignore  
+//change the path 
+// now wirte a try catch block verify 
 
 
 
-
-
-const verifyToken = (req, res, next) => {
-  const token = req?.cookies?.token;
-  console.log('cookie in middleware', token)
-  if (!token) {
-    return res.status(401).send({ message: 'unauthorized access' })
-  }
-
-
-  // ekhane amra token k verify korbo bhondhura 
-  jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: 'unauthorized access' })
-    }
-    console.log(decoded)
-    req.decoded = decoded;
-    next();
-    // ekhon abar app .get e giye if set kore asbho decode diye 
-  })
-  // next aghe ekhane chilo 
-}
-
-
-const verifyFirebaseToken = async(req,res,next) =>{
-  const authHeader= req.headers?.authorization;
-  const token = authHeader.split(' ')[1];
-
-  if(!token){
-    return res.status(401).send({message:'unauthorized access'})
-
-  }
-
-  // erpor firebse er account er project e giye projectsettinge jabo.
-  // er por service accounts e jabo .firebase admin install.code ta niye asbho okha
-  // theke .middle ware er niche oita boshai dhibo .generate new key the click korle ekta jinis dowanload hobe .er por download hoye gele file take copy kore ekhae niye asbho and ekta meaining full nam dhibho.code je khane copy korechi okhane middle ware er niche require er jaighai new file er nam ta dhibho.
-//.erpor await kora userinfo set korbo 
- 
-  // eita application e set kore asle eita cmd the dhekha jabe 
-  // er por ekhane abar asbho
-  const userInfo = await admin.auth().verifyIdToken(token)
-  // console.log( 'id token ula la ',  userInfo)
-  req.tokenEmail = userInfo.email;
- // console.log('firebase token',token)
-//  er por application e giye state ment bosabho 
-  next();
-
-}
 
 // cluster - connect er moddo theke connect korar code tah iye asbho 
 
@@ -96,6 +42,40 @@ const client = new MongoClient(uri, {
   }
 });
 
+
+// eita obbosi run er upore banabo 
+const verifyFirebaseToken = async(req,res,next) => {
+  // er por eita midleware hibese api the set  kore asbho 
+  // console.log('token in middleware',req.headers)
+  const authHeader = req.headers?.authorization;
+  // console.log(authHeader)
+  if(!authHeader || !authHeader.startsWith('Bearer ')){
+     // bearer er por must space dite hobe 
+     return res.status(401).send({message : 'unauthorized access'})
+    //  must return korte hobe 
+  }
+
+  const token = authHeader.split(' ')[1];
+  // console.log('token in ware ',token)
+  // go to firebase admin copy code/// service account
+  try{
+    const decoded = await admin.auth().verifyIdToken(token);
+    console.log('decoded token',decoded)
+    req.decoded = decoded;
+    // lets go to api 
+    next();
+  }
+  catch(error){
+    return res.status(401).send({message : 'unauthorized access'})
+  }
+
+   
+   
+
+  // next();
+  // next ekhane rakbho na 
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -108,20 +88,11 @@ async function run() {
 
     // eikhane collection create korle ar manually giye banai diye aste hoi na 
     const applicationsCollection = client.db('module-58').collection('applications')
+  
+    //  jwt related api 
 
-
-
-    // jwt related api 
-    app.post('/jwt', async (req, res) => {
-      const userData = req.body;
-      // console.log(userData)
-      const token = jwt.sign(userData, process.env.JWT_ACCESS_SECRET, { expiresIn: '1d' })
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: false
-      })
-      res.send({ success: true, token })
-    })
+    
+    
 
     // get  job data 
     app.get('/jobs', async (req, res) => {
@@ -134,10 +105,12 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/jobs/applications', async (req, res) => {
+    app.get('/jobs/applications',verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
+      if(email !== req.decoded.email ){
+        return res.status(403).send({message : 'forbidden access'})
+      }
       const query = { hr_email: email }
-
       const jobs = await jobsCollection.find(query).toArray();
 
       for (const job of jobs) {
@@ -167,19 +140,16 @@ async function run() {
     })
 
     // get data with email 
-    app.get('/applications', logger, verifyToken,verifyFirebaseToken, async (req, res) => {
+    app.get('/applications',verifyFirebaseToken,async (req, res) => {
       const email = req.query.email;
-        // firebase admin file k must git ignore korte hobe 
-      if(req.tokenEmail !== email){
-          return res.status(403).send({message:'forbidden access'})
-      }
+      // console.log(req.headers)
+      // erpor ekta verifyfirebase er token banabo 
 
       if(email !== req.decoded.email){
-        return res.status(403).send({message:'forbidden access'})
+        return res.status(403).send({message : 'forbidden access'})
       }
-
-
-
+      // ekhon er locacl hot er data pabo na 
+      // eibar client side giye bininno api er khetre use korbo 
       const query = {
         applicant: email
       }
