@@ -9,10 +9,16 @@ require('dotenv').config()
 app.use(cors())
 app.use(express.json())
 
+const decoded =Buffer.from(process.env.Fb_key,'base64').toString('utf-8')
+
 // install firebase admin in cmd 
 const admin = require("firebase-admin");
 // change the path here 
-const serviceAccount = require("./firebase-service.json");
+const serviceAccount = JSON.parse(decoded);
+// eibar deploy kore dhibho vercel --prod
+// er por vercel env the add khore redeploy kore dhibho 
+
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
@@ -68,12 +74,18 @@ const verifyFirebaseToken = async(req,res,next) => {
   catch(error){
     return res.status(401).send({message : 'unauthorized access'})
   }
-
-   
-   
-
   // next();
   // next ekhane rakbho na 
+}
+
+// vefiry email ta middleware hisebe set kore daw 
+// code delete kore daw 
+// go to client work with api 
+const verifyTokenEmail = (req,res,next) =>{
+  if(req.query.email !== req.decoded.email){
+   return res.status(403).send({message : 'forbidden access'})
+  }
+  next();
 }
 
 async function run() {
@@ -105,7 +117,7 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/jobs/applications',verifyFirebaseToken, async (req, res) => {
+    app.get('/jobs/applications',verifyFirebaseToken,verifyTokenEmail, async (req, res) => {
       const email = req.query.email;
       if(email !== req.decoded.email ){
         return res.status(403).send({message : 'forbidden access'})
@@ -140,14 +152,12 @@ async function run() {
     })
 
     // get data with email 
-    app.get('/applications',verifyFirebaseToken,async (req, res) => {
+    app.get('/applications',verifyFirebaseToken,verifyTokenEmail,async (req, res) => {
       const email = req.query.email;
       // console.log(req.headers)
       // erpor ekta verifyfirebase er token banabo 
 
-      if(email !== req.decoded.email){
-        return res.status(403).send({message : 'forbidden access'})
-      }
+      
       // ekhon er locacl hot er data pabo na 
       // eibar client side giye bininno api er khetre use korbo 
       const query = {
@@ -208,8 +218,8 @@ async function run() {
       res.send(result)
     })
 
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
